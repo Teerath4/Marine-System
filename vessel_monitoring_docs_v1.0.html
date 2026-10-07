@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vessel Distress Monitoring System — Technical Design Document</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00c8ff;
+    --accent2: #ff6b35;
+    --accent3: #39d98a;
+    --accent4: #f7c948;
+    --text: #e2e8f0;
+    --muted: #8899aa;
+    --danger: #ff4d6a;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 40px 20px;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  .doc-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+  }
+  .doc-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .doc-title {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .doc-title span { color: var(--accent); }
+  .doc-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .doc-meta span::before { content: '// '; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    border-radius: 4px;
+  }
+  .toc h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 5px 0; }
+  .toc a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+
+  /* SECTIONS */
+  section { margin-bottom: 60px; }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 28px 0 12px;
+    font-family: var(--mono);
+  }
+  p { color: var(--text); margin-bottom: 12px; }
+
+  /* CALLOUT BOXES */
+  .callout {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.warn { border-left: 3px solid var(--accent2); }
+  .callout.info { border-left: 3px solid var(--accent); }
+  .callout.ok   { border-left: 3px solid var(--accent3); }
+  .callout.note { border-left: 3px solid var(--accent4); }
+  .callout strong { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .callout.warn strong { color: var(--accent2); }
+  .callout.info strong { color: var(--accent); }
+  .callout.ok strong   { color: var(--accent3); }
+  .callout.note strong { color: var(--accent4); }
+
+  /* TABLES */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  .data-table th {
+    background: var(--surface2);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .data-table tr:hover td { background: var(--surface2); }
+  .tag { 
+    display: inline-block; 
+    padding: 2px 8px; 
+    border-radius: 3px; 
+    font-size: 11px; 
+    font-family: var(--mono);
+    background: rgba(0,200,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,200,255,0.2);
+  }
+  .tag.orange { background: rgba(255,107,53,0.1); color: var(--accent2); border-color: rgba(255,107,53,0.2); }
+  .tag.green  { background: rgba(57,217,138,0.1); color: var(--accent3); border-color: rgba(57,217,138,0.2); }
+  .tag.yellow { background: rgba(247,201,72,0.1); color: var(--accent4); border-color: rgba(247,201,72,0.2); }
+
+  /* PACKET DIAGRAMS */
+  .packet-diagram {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 16px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .pfield {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    min-width: 60px;
+    text-align: center;
+    background: var(--surface);
+  }
+  .pfield.header { background: rgba(0,200,255,0.08); border-color: rgba(0,200,255,0.3); }
+  .pfield.payload { background: rgba(57,217,138,0.06); border-color: rgba(57,217,138,0.2); }
+  .pfield.relay-path { background: rgba(247,201,72,0.06); border-color: rgba(247,201,72,0.2); }
+  .pfield-name { color: var(--text); font-weight: 600; font-size: 10px; }
+  .pfield-size { color: var(--muted); font-size: 9px; margin-top: 3px; }
+
+  /* FLAGS BYTE */
+  .flags-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    margin: 12px 0;
+    font-family: var(--mono);
+  }
+  .flag-bit {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 4px;
+    text-align: center;
+  }
+  .flag-bit .bit-num { font-size: 10px; color: var(--muted); }
+  .flag-bit .bit-name { font-size: 9px; color: var(--accent); margin-top: 3px; }
+  .flag-bit.active { border-color: rgba(0,200,255,0.4); background: rgba(0,200,255,0.06); }
+  .flag-bit.reserved .bit-name { color: var(--muted); }
+
+  /* SVG DIAGRAMS */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 24px 0;
+    overflow-x: auto;
+  }
+  .diagram-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  svg text { font-family: 'JetBrains Mono', monospace; }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-label">Technical Design Document — Firmware v1.0 (as built)</div>
+    <div class="doc-title">Vessel Distress <span>Monitoring System</span></div>
+    <div class="doc-meta">
+      <span>LoRa Mesh Network</span>
+      <span>STM32 Blue Pill + E22-900T30D</span>
+      <span>Design range: ~15 km per hop</span>
+      <span>Max Hops: 10</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#overview">System Overview</a></li>
+      <li><a href="#hardware">Hardware Stack</a></li>
+      <li><a href="#lora">LoRa Configuration</a></li>
+      <li><a href="#packets">Packet Structure</a></li>
+      <li><a href="#flags">Flags &amp; Message ID</a></li>
+      <li><a href="#flow">Communication Flow</a></li>
+      <li><a href="#ack">ACK &amp; Role Assignment Logic</a></li>
+      <li><a href="#relay">Relay Chain Logic</a></li>
+      <li><a href="#timediagram">Time Sequence Diagram</a></li>
+      <li><a href="#cache">Seen-Message Cache</a></li>
+      <li><a href="#sensing">Sensing &amp; State Estimation</a></li>
+      <li><a href="#status">Implementation Status &amp; Known Issues</a></li>
+    </ol>
+  </div>
+
+  <!-- SECTION 1: OVERVIEW -->
+  <section id="overview">
+    <div class="section-label">01</div>
+    <h2>System Overview</h2>
+    <p>A peer-to-peer LoRa mesh network mounted on coastal vessels that detects vessel distress (sinking/listing), broadcasts an alert to nearby vessels and coast guard, coordinates a helper vessel response, and relays the signal toward port when coast guard is out of direct range.</p>
+    <p>The system operates entirely over LoRa — no GSM, no internet dependency. Each device acts simultaneously as a potential distress node, helper node, and relay node depending on context. Every vessel runs the same firmware; its role is decided at runtime by a state machine, not at compile time.</p>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Fig 1.1 — System Architecture Overview</div>
+      <svg viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" width="100%">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00c8ff" opacity="0.7"/>
+          </marker>
+          <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#39d98a" opacity="0.7"/>
+          </marker>
+          <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#f7c948" opacity="0.7"/>
+          </marker>
+        </defs>
+
+        <!-- Distress Vessel -->
+        <rect x="20" y="120" width="140" height="80" rx="6" fill="#1a2235" stroke="#ff4d6a" stroke-width="1.5"/>
+        <text x="90" y="152" fill="#ff4d6a" font-size="10" text-anchor="middle" font-weight="600">DISTRESS VESSEL</text>
+        <text x="90" y="168" fill="#8899aa" font-size="9" text-anchor="middle">Water / tilt / SOS trigger</text>
+        <text x="90" y="182" fill="#8899aa" font-size="9" text-anchor="middle">Alarm + DISTRESS sent</text>
+
+        <!-- Vessel 2 - Helper -->
+        <rect x="290" y="60" width="140" height="70" rx="6" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="360" y="88" fill="#39d98a" font-size="10" text-anchor="middle" font-weight="600">VESSEL B</text>
+        <text x="360" y="104" fill="#8899aa" font-size="9" text-anchor="middle">Role: Helper</text>
+        <text x="360" y="118" fill="#8899aa" font-size="9" text-anchor="middle">Nearest to distress</text>
+
+        <!-- Vessel 3 - Relayer -->
+        <rect x="290" y="190" width="140" height="70" rx="6" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="360" y="218" fill="#f7c948" font-size="10" text-anchor="middle" font-weight="600">VESSEL C</text>
+        <text x="360" y="234" fill="#f7c948" font-size="9" text-anchor="middle">Role: Relayer</text>
+        <text x="360" y="248" fill="#8899aa" font-size="9" text-anchor="middle">Nearest to port</text>
+
+        <!-- Vessel 4 - Relayer 2 -->
+        <rect x="510" y="160" width="140" height="70" rx="6" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="580" y="188" fill="#f7c948" font-size="10" text-anchor="middle" font-weight="600">VESSEL D</text>
+        <text x="580" y="204" fill="#f7c948" font-size="9" text-anchor="middle">Forwards RELAY (hop 2)</text>
+        <text x="580" y="218" fill="#8899aa" font-size="9" text-anchor="middle">Closer to port</text>
+
+        <!-- Coast Guard -->
+        <rect x="700" y="110" width="140" height="80" rx="6" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="770" y="142" fill="#00c8ff" font-size="10" text-anchor="middle" font-weight="600">COAST GUARD</text>
+        <text x="770" y="158" fill="#8899aa" font-size="9" text-anchor="middle">PORT / BASE</text>
+        <text x="770" y="174" fill="#8899aa" font-size="9" text-anchor="middle">Receives alert + GPS</text>
+
+        <!-- Arrows: DISTRESS broadcast -->
+        <line x1="160" y1="155" x2="288" y2="100" stroke="#ff4d6a" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+        <line x1="160" y1="165" x2="288" y2="220" stroke="#ff4d6a" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+        <text x="190" y="138" fill="#ff4d6a" font-size="9">DISTRESS</text>
+
+        <!-- ACK back -->
+        <line x1="290" y1="110" x2="162" y2="152" stroke="#39d98a" stroke-width="1" stroke-dasharray="2,3" marker-end="url(#arr2)"/>
+        <line x1="290" y1="210" x2="162" y2="168" stroke="#f7c948" stroke-width="1" stroke-dasharray="2,3" marker-end="url(#arr3)"/>
+        <text x="195" y="175" fill="#8899aa" font-size="8">ACK</text>
+
+        <!-- RELAY chain -->
+        <line x1="430" y1="225" x2="508" y2="210" stroke="#f7c948" stroke-width="1.5" marker-end="url(#arr3)"/>
+        <text x="456" y="245" fill="#f7c948" font-size="9">RELAY</text>
+
+        <line x1="650" y1="195" x2="698" y2="168" stroke="#f7c948" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <!-- DISPATCH -->
+        <line x1="162" y1="145" x2="288" y2="92" stroke="#00c8ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+        <text x="200" y="112" fill="#00c8ff" font-size="8">DISPATCH</text>
+
+        <!-- Legend -->
+        <rect x="20" y="270" width="820" height="40" rx="4" fill="#111827" stroke="#1e2d45"/>
+        <line x1="40" y1="290" x2="70" y2="290" stroke="#ff4d6a" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="76" y="294" fill="#8899aa" font-size="9">DISTRESS broadcast</text>
+        <line x1="190" y1="290" x2="220" y2="290" stroke="#39d98a" stroke-width="1.5" stroke-dasharray="2,3"/>
+        <text x="226" y="294" fill="#8899aa" font-size="9">ACK response</text>
+        <line x1="310" y1="290" x2="340" y2="290" stroke="#00c8ff" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <text x="346" y="294" fill="#8899aa" font-size="9">DISPATCH (targeted)</text>
+        <line x1="470" y1="290" x2="500" y2="290" stroke="#f7c948" stroke-width="2"/>
+        <text x="506" y="294" fill="#8899aa" font-size="9">RELAY toward port</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SECTION 2: HARDWARE -->
+  <section id="hardware">
+    <div class="section-label">02</div>
+    <h2>Hardware Stack</h2>
+
+    <table class="data-table">
+      <thead><tr><th>Component</th><th>Model</th><th>Role</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Microcontroller</td><td><span class="tag">STM32 Blue Pill (F103C8T6)</span></td><td>Sensor polling, packet logic, GPS math</td><td>72 MHz Cortex-M3, 20 KB SRAM. Single-loop firmware (Arduino framework); RTOS port deferred.</td></tr>
+        <tr><td>LoRa Radio</td><td><span class="tag">Ebyte E22-900T30D (SX1262)</span></td><td>UART transparent-mode link</td><td>Serial1 (PA9/PA10). M0/M1 hardwired to GND. Configured once, outside this firmware.</td></tr>
+        <tr><td>GPS Module</td><td><span class="tag">u-blox NEO-M8L</span></td><td>Position for packets and distance calculations</td><td>Serial3 (PB10/PB11), parsed with TinyGPS++. Zero coordinates are sent if there is no fix.</td></tr>
+        <tr><td>Water Level Sensor</td><td><span class="tag">Analog sensor</span></td><td>Flood detection</td><td>12-bit ADC on PA0. Thresholds are uncalibrated placeholders.</td></tr>
+        <tr><td>IMU</td><td><span class="tag">MPU6050</span></td><td>Tilt angle from vertical</td><td>I2C1 (PB6/PB7), raw register reads. Accelerometer only (gyro unused). Motion interrupt (INT on PA1) is configured but not yet used.</td></tr>
+        <tr><td>SOS Button</td><td><span class="tag">Push button</span></td><td>Manual distress override</td><td>PA6, INPUT_PULLUP, falling-edge interrupt. Works only while the node is idle.</td></tr>
+        <tr><td>Alert</td><td><span class="tag">Buzzer + LED</span></td><td>Local onboard alarm</td><td>PA4 / PA5. On for the whole distress, regardless of radio success.</td></tr>
+        <tr><td>Power</td><td><span class="tag">LiPo + regulator</span></td><td>Independent power from vessel supply</td><td>Hardware requirement, not handled in firmware. Dedicated battery required.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Power Warning</strong>
+      A sinking vessel loses main power early. If this device depends on vessel power, it fails at the worst moment. Dedicated battery with its own charging circuit is non-negotiable even for a prototype.
+    </div>
+  </section>
+
+  <!-- SECTION 3: LORA CONFIG -->
+  <section id="lora">
+    <div class="section-label">03</div>
+    <h2>LoRa Configuration</h2>
+
+    <table class="data-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Frequency</td><td><span class="tag">866.125 MHz (channel 16)</span></td><td>E22 channels are 850.125 MHz + CH × 1 MHz. Inside the 865–867 MHz band.</td></tr>
+        <tr><td>Mode</td><td><span class="tag">Transparent</span></td><td>UART tunnel. The firmware frames packets itself: a packet is complete after 50 ms with no new bytes.</td></tr>
+        <tr><td>TX Power</td><td><span class="tag">30 dBm</span></td><td>Module setting. Check against the current Indian rules for the band before deployment.</td></tr>
+        <tr><td>Listen Before Talk</td><td><span class="tag">Enabled (module)</span></td><td>Replaces firmware CAD. The module senses the channel before transmitting.</td></tr>
+        <tr><td>Air rate / SF / BW / CR</td><td><span class="tag orange">Set in module config</span></td><td>Not set by this firmware. Record the values used; they determine airtime (see timing note below).</td></tr>
+        <tr><td>CRC</td><td><span class="tag">Handled by module</span></td><td>No software CRC in the firmware.</td></tr>
+        <tr><td>Largest packet</td><td><span class="tag">31 bytes (RELAY)</span></td><td>Receive buffer is 40 bytes. Keep below the module's configured sub-packet size.</td></tr>
+        <tr><td>Target Range</td><td><span class="tag">~15 km per hop</span></td><td>Design target, not field-validated. Vendor listings for the E22-900T30D quote about 10 km.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Collision Avoidance Strategy</h3>
+    <p>Multiple vessels may receive the same DISTRESS packet and attempt to relay or ACK simultaneously. Two mechanisms prevent collision:</p>
+    <p><strong>1. Listen before talk (in the module):</strong> The E22 senses the channel before every transmission. The firmware contains no CAD or channel-retry code of its own.</p>
+    <p><strong>2. Jitter delay:</strong> Before transmitting an ACK, each vessel waits a random delay proportional to its distance from the distress vessel. Closer vessels wait less, so their ACK arrives first with fewer collisions. In firmware this is a blocking <code>delay()</code>.</p>
+
+    <div class="callout info">
+      <strong>Jitter Formula</strong>
+      Jitter delay (ms) = (distance_to_distress_km / 15.0) × 2000 + random(0, 500)<br>
+      Result: a vessel 3km away waits ~400–900ms; a vessel 12km away waits ~1600–2100ms.
+    </div>
+
+    <div class="callout warn">
+      <strong>Timing Note</strong>
+      Airtime depends on the air rate set in the module. At the slowest LoRa settings (SF12, 125 kHz, CR 4/8) a 19-byte DISTRESS takes about 1.7 s on air, an ACK about 2 s and a RELAY about 2.5 s (standard LoRa airtime formula). ACK jitter windows and relay hops must be budgeted against that. Measure with your configured rate.
+    </div>
+  </section>
+
+  <!-- SECTION 4: PACKETS -->
+  <section id="packets">
+    <div class="section-label">04</div>
+    <h2>Packet Structure</h2>
+
+    <div class="callout note">
+      <strong>Encoding Rule</strong>
+      All fields are binary, fixed-width. No JSON, no strings. GPS coordinates stored as int32 (value × 10⁶). All multi-byte integers are big-endian.
+    </div>
+
+    <h3>Shared Header — 10 bytes (all packet types)</h3>
+    <div class="packet-diagram">
+      <div class="pfield header"><span class="pfield-name">TYPE</span><span class="pfield-size">1 byte</span></div>
+      <div class="pfield header"><span class="pfield-name">FLAGS</span><span class="pfield-size">1 byte</span></div>
+      <div class="pfield header"><span class="pfield-name">MSG_ID</span><span class="pfield-size">2 bytes</span></div>
+      <div class="pfield header"><span class="pfield-name">VESSEL_ID</span><span class="pfield-size">2 bytes</span></div>
+      <div class="pfield header"><span class="pfield-name">TIMESTAMP</span><span class="pfield-size">4 bytes</span></div>
+    </div>
+    <p style="font-size:13px; color: var(--muted);">MSG_ID = VESSEL_ID XOR sequence counter (16 bits), regenerated on every transmission including retries. In an ACK, bytes 2–3 carry the responder's own sequence counter instead. TIMESTAMP is <code>millis()</code> since boot, not UTC. Header total: <strong style="color:var(--accent)">10 bytes</strong>.</p>
+
+    <h3>Type Byte Values</h3>
+    <table class="data-table">
+      <thead><tr><th>Hex</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">0x01</span></td><td>DISTRESS</td></tr>
+        <tr><td><span class="tag orange">0x02</span></td><td>ACK</td></tr>
+        <tr><td><span class="tag green">0x03</span></td><td>DISPATCH</td></tr>
+        <tr><td><span class="tag yellow">0x04</span></td><td>RELAY</td></tr>
+      </tbody>
+    </table>
+
+    <h3>DISTRESS Packet — 19 bytes total</h3>
+    <div class="packet-diagram">
+      <div class="pfield header"><span class="pfield-name">TYPE=0x01</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">FLAGS</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">MSG_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">VESSEL_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">TIMESTAMP</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">LAT</span><span class="pfield-size">4B int32</span></div>
+      <div class="pfield payload"><span class="pfield-name">LON</span><span class="pfield-size">4B int32</span></div>
+      <div class="pfield payload"><span class="pfield-name">HOP_COUNT</span><span class="pfield-size">1B</span></div>
+    </div>
+
+    <h3>ACK Packet — 22 bytes total</h3>
+    <div class="packet-diagram">
+      <div class="pfield header"><span class="pfield-name">TYPE=0x02</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">FLAGS</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">MSG_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">VESSEL_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">TIMESTAMP</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">ORIGIN_MSGID</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">SENDER_LAT</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">SENDER_LON</span><span class="pfield-size">4B</span></div>
+    </div>
+    <p style="font-size:13px; color: var(--muted);">ORIGIN_MSGID is sent as 32 bits (upper 16 bits zero) and matched against the active distress MSG_ID. DIST_TO_PORT was removed: the distress vessel computes every distance itself (haversine) from the raw coordinates in each ACK.</p>
+
+    <h3>DISPATCH Packet — 21 bytes total (as sent)</h3>
+    <div class="packet-diagram">
+      <div class="pfield header"><span class="pfield-name">TYPE=0x03</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">FLAGS</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">MSG_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">VESSEL_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">TIMESTAMP</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">TARGET_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield payload"><span class="pfield-name">ROLE</span><span class="pfield-size">1B</span></div>
+      <div class="pfield payload"><span class="pfield-name">LAT (distress)</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">LON (distress)</span><span class="pfield-size">4B</span></div>
+    </div>
+    <p style="font-size:13px; color: var(--muted);">ROLE byte: <code style="color:var(--accent3)">0x01</code> = Helper, <code style="color:var(--accent4)">0x02</code> = Relayer. All vessels hear DISPATCH; non-targeted ones check TARGET_ID and ignore if not addressed to them. ROLE is a bitmask: <code>0x03</code> means one vessel is both helper and relayer. <strong>Known issue:</strong> the receiver currently requires 23 bytes, so 21-byte DISPATCH packets are rejected (see Implementation Status).</p>
+
+    <h3>RELAY Packet — 31 bytes total (defined layout, max path)</h3>
+    <div class="packet-diagram">
+      <div class="pfield header"><span class="pfield-name">TYPE=0x04</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">FLAGS</span><span class="pfield-size">1B</span></div>
+      <div class="pfield header"><span class="pfield-name">MSG_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">VESSEL_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield header"><span class="pfield-name">TIMESTAMP</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">ORIGIN_ID</span><span class="pfield-size">2B</span></div>
+      <div class="pfield payload"><span class="pfield-name">ORIGIN_LAT</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">ORIGIN_LON</span><span class="pfield-size">4B</span></div>
+      <div class="pfield payload"><span class="pfield-name">HOP_COUNT</span><span class="pfield-size">1B</span></div>
+      <div class="pfield relay-path"><span class="pfield-name">PATH[0..4]</span><span class="pfield-size">5×2B=10B</span></div>
+    </div>
+    <p style="font-size:13px; color: var(--muted);">Each forwarding vessel increments HOP_COUNT and appends its VESSEL_ID to PATH. PATH holds only 5 entries although the hop limit is 10, so loop detection covers the first 5 hops. The forwarding code currently reads HOP_COUNT at byte 19; under this layout it is byte 20 (see Implementation Status).</p>
+  </section>
+
+  <!-- SECTION 5: FLAGS -->
+  <section id="flags">
+    <div class="section-label">05</div>
+    <h2>Flags Byte &amp; Message ID</h2>
+
+    <h3>Flags Byte (1 byte = 8 bits)</h3>
+    <div class="flags-grid">
+      <div class="flag-bit active"><div class="bit-num">Bit 7</div><div class="bit-name">IS_RELAY</div></div>
+      <div class="flag-bit active"><div class="bit-num">Bit 6</div><div class="bit-name">ACK_REQ</div></div>
+      <div class="flag-bit active"><div class="bit-num">Bit 5</div><div class="bit-name">ROLE_ASSIGNED</div></div>
+      <div class="flag-bit active"><div class="bit-num">Bit 4</div><div class="bit-name">CHAIN_EXHAUSTED</div></div>
+      <div class="flag-bit reserved"><div class="bit-num">Bit 3</div><div class="bit-name">RESERVED</div></div>
+      <div class="flag-bit reserved"><div class="bit-num">Bit 2</div><div class="bit-name">RESERVED</div></div>
+      <div class="flag-bit reserved"><div class="bit-num">Bit 1</div><div class="bit-name">RESERVED</div></div>
+      <div class="flag-bit reserved"><div class="bit-num">Bit 0</div><div class="bit-name">RESERVED</div></div>
+    </div>
+
+    <table class="data-table" style="margin-top:16px">
+      <thead><tr><th>Flag</th><th>Bit</th><th>Meaning</th><th>In firmware v1.0</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">IS_RELAY</span></td><td>7</td><td>0 = origin packet, 1 = relayed at least once</td><td>Defined, never set</td></tr>
+        <tr><td><span class="tag">ACK_REQ</span></td><td>6</td><td>1 = sender expects an ACK</td><td>Set on every DISTRESS</td></tr>
+        <tr><td><span class="tag">ROLE_ASSIGNED</span></td><td>5</td><td>1 = a role was assigned via DISPATCH</td><td>Set on every DISPATCH</td></tr>
+        <tr><td><span class="tag">CHAIN_EXHAUSTED</span></td><td>4</td><td>1 = hop limit reached without reaching coast guard</td><td>Defined, never set (packets at the limit are silently dropped)</td></tr>
+        <tr><td><span class="tag orange">RESERVED</span></td><td>3–0</td><td>Set to 0</td><td>Unused</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Message ID Design</h3>
+    <p>MSG_ID = <code style="color:var(--accent)">VESSEL_ID</code> XOR <code style="color:var(--accent3)">sequence counter</code>, 16 bits. The sequence counter increments on every transmission, so retries get fresh IDs.</p>
+    <p>This is a compact local key for the seen-cache, not a guaranteed-unique ID: different (vessel, sequence) pairs can XOR to the same value (for example vessel 1 / seq 2 and vessel 3 / seq 0). The packet carries MSG_ID and VESSEL_ID but not the sequence number itself. Recommended fix: carry VESSEL_ID and SEQ_NUM as separate header fields and key the cache on the pair.</p>
+
+    <div class="callout ok">
+      <strong>Seen-Message Cache</strong>
+      Each node maintains a cache of recently seen MsgIDs to avoid re-relaying or re-processing the same packet. The cache holds 32 entries (16-bit MSG_ID plus a <code>millis()</code> timestamp). Entries older than 10 minutes are freed, and when the cache is full the oldest entry is overwritten.
+    </div>
+  </section>
+
+  <!-- SECTION 6: FLOW DIAGRAM -->
+  <section id="flow">
+    <div class="section-label">06</div>
+    <h2>Communication Flow</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Fig 6.1 — Main Distress Trigger &amp; Broadcast Flow</div>
+      <svg viewBox="0 0 700 620" xmlns="http://www.w3.org/2000/svg" width="100%">
+        <defs>
+          <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#8899aa"/>
+          </marker>
+          <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#39d98a"/>
+          </marker>
+          <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ff4d6a"/>
+          </marker>
+        </defs>
+
+        <!-- START -->
+        <ellipse cx="350" cy="30" rx="80" ry="20" fill="#1a2235" stroke="#8899aa" stroke-width="1.5"/>
+        <text x="350" y="34" fill="#8899aa" font-size="11" text-anchor="middle">SENSOR POLL 5 s / 1.5 s</text>
+
+        <line x1="350" y1="50" x2="350" y2="75" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- Decision: distress? -->
+        <polygon points="350,75 430,110 350,145 270,110" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="350" y="106" fill="#f7c948" font-size="10" text-anchor="middle">Tilt ≥40° (2 s) or</text>
+        <text x="350" y="120" fill="#f7c948" font-size="10" text-anchor="middle">water ≥2600 / SOS?</text>
+
+        <!-- NO path -->
+        <line x1="270" y1="110" x2="120" y2="110" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+        <text x="195" y="105" fill="#39d98a" font-size="10" text-anchor="middle">NO</text>
+        <line x1="120" y1="110" x2="120" y2="30" stroke="#8899aa" stroke-width="1"/>
+        <line x1="120" y1="30" x2="270" y2="30" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- YES path down -->
+        <line x1="350" y1="145" x2="350" y2="175" stroke="#ff4d6a" stroke-width="1.5" marker-end="url(#a3)"/>
+        <text x="362" y="163" fill="#ff4d6a" font-size="10">YES</text>
+
+        <!-- Local alarm (LED + buzzer) -->
+        <rect x="250" y="175" width="200" height="40" rx="5" fill="#1a2235" stroke="#ff4d6a" stroke-width="1.5"/>
+        <text x="350" y="200" fill="#ff4d6a" font-size="11" text-anchor="middle">Trigger local alarm</text>
+        <line x1="350" y1="215" x2="350" y2="245" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- Build DISTRESS packet -->
+        <rect x="240" y="245" width="220" height="50" rx="5" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="350" y="265" fill="#00c8ff" font-size="11" text-anchor="middle">Build DISTRESS packet</text>
+        <text x="350" y="282" fill="#8899aa" font-size="9" text-anchor="middle">[Header | LAT | LON | HopCount=0]</text>
+        <line x1="350" y1="295" x2="350" y2="325" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- CAD check -->
+        <polygon points="350,325 430,360 350,395 270,360" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="350" y="354" fill="#f7c948" font-size="10" text-anchor="middle">Module LBT:</text>
+        <text x="350" y="368" fill="#f7c948" font-size="10" text-anchor="middle">busy?</text>
+
+        <!-- CAD busy -->
+        <line x1="430" y1="360" x2="570" y2="360" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+        <text x="500" y="353" fill="#ff4d6a" font-size="10">BUSY</text>
+        <rect x="510" y="340" width="120" height="40" rx="5" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="570" y="355" fill="#8899aa" font-size="9" text-anchor="middle">Module defers</text>
+        <text x="570" y="370" fill="#8899aa" font-size="9" text-anchor="middle">and retries</text>
+        <line x1="570" y1="380" x2="570" y2="420" stroke="#8899aa" stroke-width="1"/>
+        <line x1="570" y1="420" x2="432" y2="420" stroke="#8899aa" stroke-width="1"/>
+        <line x1="432" y1="420" x2="432" y2="395" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- clear -->
+        <line x1="350" y1="395" x2="350" y2="425" stroke="#39d98a" stroke-width="1.5" marker-end="url(#a2)"/>
+        <text x="362" y="413" fill="#39d98a" font-size="10">CLEAR</text>
+
+        <!-- Broadcast -->
+        <rect x="240" y="425" width="220" height="50" rx="5" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="350" y="447" fill="#39d98a" font-size="11" text-anchor="middle">Broadcast DISTRESS</text>
+        <text x="350" y="463" fill="#8899aa" font-size="9" text-anchor="middle">Vessels in range (~15 km design)</text>
+        <line x1="350" y1="475" x2="350" y2="505" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- Start ACK window -->
+        <rect x="220" y="505" width="260" height="50" rx="5" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="350" y="527" fill="#00c8ff" font-size="11" text-anchor="middle">Open ACK collection window</text>
+        <text x="350" y="543" fill="#8899aa" font-size="9" text-anchor="middle">Wait 10 seconds. Collect all ACKs.</text>
+        <line x1="350" y1="555" x2="350" y2="585" stroke="#8899aa" stroke-width="1" marker-end="url(#a1)"/>
+
+        <!-- Continue arrow -->
+        <ellipse cx="350" cy="600" rx="80" ry="18" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="350" y="604" fill="#8899aa" font-size="10" text-anchor="middle">→ See Fig 7.1</text>
+      </svg>
+    </div>
+  <div class="callout info">
+      <strong>As built</strong>
+      Polling is 5 s while idle and 1.5 s once either sensor crosses its early-warning threshold. Distress triggers on tilt held at 40° or more for 2 s, on water at or above the distress level (no hold time), or on the SOS button. See section 11 for the full thresholds.
+    </div>
+  </section>
+
+  <!-- SECTION 7: ACK LOGIC -->
+  <section id="ack">
+    <div class="section-label">07</div>
+    <h2>ACK &amp; Role Assignment Logic</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Fig 7.1 — ACK Collection, Role Assignment &amp; Dispatch</div>
+      <svg viewBox="0 0 760 600" xmlns="http://www.w3.org/2000/svg" width="100%">
+        <defs>
+          <marker id="b1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#8899aa"/>
+          </marker>
+          <marker id="b2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#39d98a"/>
+          </marker>
+          <marker id="b3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ff4d6a"/>
+          </marker>
+          <marker id="b4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#f7c948"/>
+          </marker>
+        </defs>
+
+        <!-- Incoming from fig 6 -->
+        <ellipse cx="380" cy="25" rx="120" ry="18" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="380" y="29" fill="#8899aa" font-size="10" text-anchor="middle">ACK window open (10 sec)</text>
+        <line x1="380" y1="43" x2="380" y2="68" stroke="#8899aa" stroke-width="1" marker-end="url(#b1)"/>
+
+        <!-- Each receiving vessel -->
+        <rect x="230" y="68" width="300" height="55" rx="5" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="380" y="89" fill="#00c8ff" font-size="11" text-anchor="middle">Each vessel receives DISTRESS</text>
+        <text x="380" y="105" fill="#8899aa" font-size="9" text-anchor="middle">Jitter delay (closer = shorter wait)</text>
+
+        <line x1="380" y1="123" x2="380" y2="148" stroke="#8899aa" stroke-width="1" marker-end="url(#b1)"/>
+
+        <rect x="230" y="148" width="300" height="55" rx="5" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="380" y="168" fill="#00c8ff" font-size="11" text-anchor="middle">Build ACK packet</text>
+        <text x="380" y="184" fill="#8899aa" font-size="9" text-anchor="middle">[own GPS | ORIGIN_MSGID]</text>
+
+        <line x1="380" y1="203" x2="380" y2="228" stroke="#8899aa" stroke-width="1" marker-end="url(#b1)"/>
+
+        <!-- Decision: ACKs received? -->
+        <polygon points="380,228 490,268 380,308 270,268" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="380" y="262" fill="#f7c948" font-size="10" text-anchor="middle">Any ACKs received</text>
+        <text x="380" y="277" fill="#f7c948" font-size="10" text-anchor="middle">within 10s window?</text>
+
+        <!-- NO — retry -->
+        <line x1="270" y1="268" x2="100" y2="268" stroke="#ff4d6a" stroke-width="1" marker-end="url(#b3)"/>
+        <text x="185" y="260" fill="#ff4d6a" font-size="10">NO</text>
+        <rect x="20" y="248" width="120" height="40" rx="4" fill="#1a2235" stroke="#ff4d6a" stroke-width="1"/>
+        <text x="80" y="264" fill="#ff4d6a" font-size="9" text-anchor="middle">Rebroadcast</text>
+        <text x="80" y="278" fill="#8899aa" font-size="9" text-anchor="middle">after backoff gap</text>
+        <text x="80" y="295" fill="#8899aa" font-size="9" text-anchor="middle">(no retry limit)</text>
+
+        <!-- YES down -->
+        <line x1="380" y1="308" x2="380" y2="338" stroke="#39d98a" stroke-width="1.5" marker-end="url(#b2)"/>
+        <text x="392" y="326" fill="#39d98a" font-size="10">YES</text>
+
+        <!-- Sort ACKs -->
+        <rect x="210" y="338" width="340" height="60" rx="5" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="380" y="360" fill="#39d98a" font-size="11" text-anchor="middle">Sort ACK pool</text>
+        <text x="380" y="376" fill="#8899aa" font-size="9" text-anchor="middle">By distance to distress → pick Helper (nearest)</text>
+        <text x="380" y="390" fill="#8899aa" font-size="9" text-anchor="middle">By distance to port → pick 1 Relayer (closest)</text>
+
+        <line x1="380" y1="398" x2="380" y2="428" stroke="#8899aa" stroke-width="1" marker-end="url(#b1)"/>
+
+        <!-- Send DISPATCH -->
+        <rect x="210" y="428" width="340" height="60" rx="5" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="380" y="450" fill="#f7c948" font-size="11" text-anchor="middle">Send DISPATCH packets</text>
+        <text x="380" y="466" fill="#8899aa" font-size="9" text-anchor="middle">ROLE=0x01 to Helper (nearest to distress)</text>
+        <text x="380" y="480" fill="#8899aa" font-size="9" text-anchor="middle">ROLE=0x02 to Relayer; 0x03 if same vessel</text>
+
+        <line x1="380" y1="488" x2="380" y2="518" stroke="#8899aa" stroke-width="1" marker-end="url(#b1)"/>
+
+        <!-- Other vessels stand by -->
+        <rect x="210" y="518" width="340" height="60" rx="5" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="380" y="540" fill="#8899aa" font-size="11" text-anchor="middle">Non-targeted vessels</text>
+        <text x="380" y="556" fill="#8899aa" font-size="9" text-anchor="middle">Check TARGET_ID in DISPATCH → not them → stand by</text>
+        <text x="380" y="570" fill="#8899aa" font-size="9" text-anchor="middle">Remain alert for future rebroadcast</text>
+      </svg>
+    </div>
+  <h3>Retry with backoff</h3>
+    <p>If the 10 s ACK window closes with no ACKs, the node waits an idle gap and rebroadcasts with a fresh MSG_ID. The gap grows with time since the first trigger; the local alarm stays on throughout.</p>
+    <table class="data-table">
+      <thead><tr><th>Time since first trigger</th><th>Idle gap</th><th>Cycle (gap + 10 s window)</th></tr></thead>
+      <tbody>
+        <tr><td>0 – 2 min</td><td>0 s</td><td>~10 s</td></tr>
+        <tr><td>2 – 10 min</td><td>20 s</td><td>~30 s</td></tr>
+        <tr><td>10 – 30 min</td><td>50 s</td><td>~60 s</td></tr>
+        <tr><td>After 30 min</td><td>170 s</td><td>~180 s, repeats indefinitely</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <strong>Behaviour after dispatch</strong>
+      Once at least one ACK arrives, the node sends its DISPATCH packet(s), silences the alarm and returns to idle. If the sensors are still past their thresholds, the next poll triggers a new distress. Helper and relayer vessels switch to a role state that currently has no exit and stops their own sensor polling.
+    </div>
+  </section>
+
+  <!-- SECTION 8: RELAY LOGIC -->
+  <section id="relay">
+    <div class="section-label">08</div>
+    <h2>Relay Chain Logic</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Fig 8.1 — Relay Chain Toward Coast Guard</div>
+      <svg viewBox="0 0 740 560" xmlns="http://www.w3.org/2000/svg" width="100%">
+        <defs>
+          <marker id="c1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#8899aa"/>
+          </marker>
+          <marker id="c2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#39d98a"/>
+          </marker>
+          <marker id="c3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#f7c948"/>
+          </marker>
+          <marker id="c4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ff4d6a"/>
+          </marker>
+        </defs>
+
+        <!-- Start: Relayer vessel received DISPATCH -->
+        <ellipse cx="370" cy="28" rx="170" ry="18" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="370" y="32" fill="#f7c948" font-size="10" text-anchor="middle">DISPATCH ROLE=0x02 received (RELAY origination planned)</text>
+        <line x1="370" y1="46" x2="370" y2="71" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+
+        <!-- Build RELAY packet -->
+        <rect x="210" y="71" width="320" height="55" rx="5" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="370" y="93" fill="#f7c948" font-size="11" text-anchor="middle">Build RELAY packet</text>
+        <text x="370" y="109" fill="#8899aa" font-size="9" text-anchor="middle">[OriginID | OriginGPS | HopCount=1 | Path=[selfID]]</text>
+        <line x1="370" y1="126" x2="370" y2="151" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+
+        <!-- CAD -->
+        <polygon points="370,151 460,185 370,219 280,185" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="370" y="179" fill="#f7c948" font-size="10" text-anchor="middle">Module LBT:</text>
+        <text x="370" y="193" fill="#f7c948" font-size="10" text-anchor="middle">busy?</text>
+
+        <line x1="460" y1="185" x2="580" y2="185" stroke="#8899aa" stroke-width="1"/>
+        <rect x="530" y="166" width="100" height="38" rx="4" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="580" y="182" fill="#8899aa" font-size="9" text-anchor="middle">Module defers</text>
+        <text x="580" y="196" fill="#8899aa" font-size="9" text-anchor="middle">and retries</text>
+        <line x1="580" y1="204" x2="580" y2="240" stroke="#8899aa" stroke-width="1"/>
+        <line x1="580" y1="240" x2="462" y2="240" stroke="#8899aa" stroke-width="1"/>
+        <line x1="462" y1="240" x2="462" y2="219" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+
+        <line x1="370" y1="219" x2="370" y2="249" stroke="#39d98a" stroke-width="1.5" marker-end="url(#c2)"/>
+        <text x="382" y="237" fill="#39d98a" font-size="10">CLEAR</text>
+
+        <!-- Broadcast RELAY -->
+        <rect x="220" y="249" width="300" height="45" rx="5" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="370" y="268" fill="#39d98a" font-size="11" text-anchor="middle">Broadcast RELAY packet</text>
+        <text x="370" y="284" fill="#8899aa" font-size="9" text-anchor="middle">All vessels in range receive it</text>
+        <line x1="370" y1="294" x2="370" y2="319" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+
+        <!-- Decision: coast guard in range? -->
+        <polygon points="370,319 480,357 370,395 260,357" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="370" y="351" fill="#f7c948" font-size="10" text-anchor="middle">Coast guard in</text>
+        <text x="370" y="365" fill="#f7c948" font-size="10" text-anchor="middle">direct range?</text>
+
+        <!-- YES: delivered -->
+        <line x1="480" y1="357" x2="620" y2="357" stroke="#39d98a" stroke-width="1.5" marker-end="url(#c2)"/>
+        <text x="550" y="350" fill="#39d98a" font-size="10">YES</text>
+        <rect x="570" y="337" width="130" height="40" rx="4" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="635" y="354" fill="#39d98a" font-size="9" text-anchor="middle">Coast guard</text>
+        <text x="635" y="368" fill="#39d98a" font-size="9" text-anchor="middle">receives RELAY ✓</text>
+
+        <!-- NO path down -->
+        <line x1="370" y1="395" x2="370" y2="425" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+        <text x="382" y="413" fill="#ff4d6a" font-size="10">NO</text>
+
+        <!-- Hop count check -->
+        <polygon points="370,425 460,460 370,495 280,460" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="370" y="454" fill="#f7c948" font-size="10" text-anchor="middle">HopCount</text>
+        <text x="370" y="468" fill="#f7c948" font-size="10" text-anchor="middle">&lt; 10?</text>
+
+        <!-- YES increment and rebroadcast -->
+        <line x1="370" y1="495" x2="370" y2="525" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+        <text x="382" y="513" fill="#39d98a" font-size="10">YES</text>
+        <rect x="220" y="525" width="300" height="30" rx="4" fill="#1a2235" stroke="#8899aa" stroke-width="1"/>
+        <text x="370" y="544" fill="#8899aa" font-size="10" text-anchor="middle">HopCount++ | Append selfID to PATH | Rebroadcast</text>
+
+        <!-- Loop arrow back to CAD -->
+        <line x1="220" y1="540" x2="150" y2="540" stroke="#8899aa" stroke-width="1"/>
+        <line x1="150" y1="540" x2="150" y2="185" stroke="#8899aa" stroke-width="1"/>
+        <line x1="150" y1="185" x2="278" y2="185" stroke="#8899aa" stroke-width="1" marker-end="url(#c1)"/>
+
+        <!-- NO: hop limit -->
+        <line x1="460" y1="460" x2="620" y2="460" stroke="#ff4d6a" stroke-width="1" marker-end="url(#c4)"/>
+        <text x="540" y="453" fill="#ff4d6a" font-size="10">NO (≥10)</text>
+        <rect x="570" y="442" width="130" height="36" rx="4" fill="#1a2235" stroke="#ff4d6a" stroke-width="1"/>
+        <text x="635" y="458" fill="#ff4d6a" font-size="9" text-anchor="middle">Chain killed</text>
+        <text x="635" y="472" fill="#8899aa" font-size="9" text-anchor="middle">not forwarded</text>
+      </svg>
+    </div>
+  <div class="callout note">
+      <strong>As built</strong>
+      Forwarding is implemented: any vessel that hears a RELAY packet checks the seen-cache and the PATH for its own ID (loop), drops it at 10 hops, and otherwise increments HOP_COUNT, appends its ID (first 5 hops only) and rebroadcasts. <strong>Origination is not implemented:</strong> no code builds the first RELAY packet after a relayer is dispatched, and no coast-guard receiver is part of this firmware. The chain is dropped silently at the hop limit.
+    </div>
+  </section>
+
+  <!-- SECTION 9: TIME SEQUENCE DIAGRAM -->
+  <section id="timediagram">
+    <div class="section-label">09</div>
+    <h2>Time Sequence Diagram</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Fig 9.1 — Full Message Sequence (Distress → Coast Guard)</div>
+      <svg viewBox="0 0 820 680" xmlns="http://www.w3.org/2000/svg" width="100%">
+        <defs>
+          <marker id="d1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#00c8ff"/>
+          </marker>
+          <marker id="d2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#39d98a"/>
+          </marker>
+          <marker id="d3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#f7c948"/>
+          </marker>
+          <marker id="d4" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#ff4d6a"/>
+          </marker>
+          <marker id="d5" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#8899aa"/>
+          </marker>
+        </defs>
+
+        <!-- Participant columns -->
+        <!-- x positions: Distress=80, VesselB=230, VesselC=380, VesselD=530, CoastGuard=680 -->
+
+        <!-- Headers -->
+        <rect x="20" y="10" width="120" height="44" rx="5" fill="#1a2235" stroke="#ff4d6a" stroke-width="1.5"/>
+        <text x="80" y="29" fill="#ff4d6a" font-size="10" text-anchor="middle" font-weight="600">DISTRESS</text>
+        <text x="80" y="43" fill="#8899aa" font-size="9" text-anchor="middle">VESSEL A</text>
+
+        <rect x="170" y="10" width="120" height="44" rx="5" fill="#1a2235" stroke="#39d98a" stroke-width="1.5"/>
+        <text x="230" y="29" fill="#39d98a" font-size="10" text-anchor="middle" font-weight="600">VESSEL B</text>
+        <text x="230" y="43" fill="#8899aa" font-size="9" text-anchor="middle">Helper</text>
+
+        <rect x="320" y="10" width="120" height="44" rx="5" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="380" y="29" fill="#f7c948" font-size="10" text-anchor="middle" font-weight="600">VESSEL C</text>
+        <text x="380" y="43" fill="#8899aa" font-size="9" text-anchor="middle">Relayer</text>
+
+        <rect x="470" y="10" width="120" height="44" rx="5" fill="#1a2235" stroke="#f7c948" stroke-width="1.5"/>
+        <text x="530" y="29" fill="#f7c948" font-size="10" text-anchor="middle" font-weight="600">VESSEL D</text>
+        <text x="530" y="43" fill="#8899aa" font-size="9" text-anchor="middle">Forwards RELAY</text>
+
+        <rect x="620" y="10" width="120" height="44" rx="5" fill="#1a2235" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="680" y="29" fill="#00c8ff" font-size="10" text-anchor="middle" font-weight="600">COAST</text>
+        <text x="680" y="43" fill="#8899aa" font-size="9" text-anchor="middle">GUARD PORT</text>
+
+        <!-- Lifelines -->
+        <line x1="80" y1="54" x2="80" y2="660" stroke="#ff4d6a" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+        <line x1="230" y1="54" x2="230" y2="660" stroke="#39d98a" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+        <line x1="380" y1="54" x2="380" y2="660" stroke="#f7c948" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+        <line x1="530" y1="54" x2="530" y2="660" stroke="#f7c948" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+        <line x1="680" y1="54" x2="680" y2="660" stroke="#00c8ff" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+
+        <!-- T=0: Sensor triggers -->
+        <text x="5" y="90" fill="#8899aa" font-size="9">t=0s</text>
+        <rect x="60" y="78" width="40" height="18" rx="3" fill="#ff4d6a" opacity="0.2"/>
+        <text x="80" y="91" fill="#ff4d6a" font-size="8" text-anchor="middle">SENSOR</text>
+        <text x="80" y="103" fill="#8899aa" font-size="8" text-anchor="middle">alarm + build pkt</text>
+
+        <!-- T=0.5: DISTRESS broadcast -->
+        <text x="5" y="128" fill="#8899aa" font-size="9">t≈0</text>
+        <line x1="80" y1="122" x2="228" y2="122" stroke="#ff4d6a" stroke-width="1.5" marker-end="url(#d4)"/>
+        <line x1="80" y1="126" x2="378" y2="126" stroke="#ff4d6a" stroke-width="1.5" marker-end="url(#d4)"/>
+        <text x="155" y="118" fill="#ff4d6a" font-size="9" text-anchor="middle">DISTRESS broadcast</text>
+
+        <!-- T=1.2: Vessel B ACK (nearest, shortest jitter) -->
+        <text x="5" y="168" fill="#8899aa" font-size="9">+jitter</text>
+        <line x1="230" y1="162" x2="82" y2="162" stroke="#39d98a" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#d2)"/>
+        <text x="155" y="157" fill="#39d98a" font-size="8" text-anchor="middle">ACK (nearest, short jitter)</text>
+
+        <!-- T=2.1: Vessel C ACK (farther, longer jitter) -->
+        <text x="5" y="198" fill="#8899aa" font-size="9">+jitter</text>
+        <line x1="380" y1="192" x2="82" y2="192" stroke="#f7c948" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#d3)"/>
+        <text x="230" y="187" fill="#f7c948" font-size="8" text-anchor="middle">ACK (further, longer jitter)</text>
+
+        <!-- T=3.5: Vessel D ACK -->
+        <text x="5" y="228" fill="#8899aa" font-size="9">+jitter</text>
+        <line x1="530" y1="222" x2="82" y2="222" stroke="#f7c948" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#d3)"/>
+        <text x="305" y="217" fill="#f7c948" font-size="8" text-anchor="middle">ACK</text>
+
+        <!-- T=10: Window closes -->
+        <line x1="20" y1="248" x2="800" y2="248" stroke="#1e2d45" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="5" y="258" fill="#8899aa" font-size="9">t=10s</text>
+        <text x="200" y="258" fill="#8899aa" font-size="8">ACK window closes — sort pool</text>
+
+        <!-- T=10.2: DISPATCH to B (helper) -->
+        <text x="5" y="285" fill="#8899aa" font-size="9">t&gt;10s</text>
+        <line x1="80" y1="279" x2="228" y2="279" stroke="#00c8ff" stroke-width="1.5" marker-end="url(#d1)"/>
+        <text x="155" y="274" fill="#00c8ff" font-size="8" text-anchor="middle">DISPATCH ROLE=0x01 (Helper)</text>
+
+        <!-- T=10.4: DISPATCH to C+D (relayers) -->
+        <text x="5" y="308" fill="#8899aa" font-size="9">t&gt;10s</text>
+        <line x1="80" y1="302" x2="378" y2="302" stroke="#00c8ff" stroke-width="1.5" marker-end="url(#d1)"/>
+        <text x="300" y="298" fill="#00c8ff" font-size="8" text-anchor="middle">DISPATCH ROLE=0x02 (Relayer)</text>
+
+        <!-- B heads to rescue -->
+        <text x="175" y="330" fill="#39d98a" font-size="8" text-anchor="middle">→ proceeds to rescue</text>
+
+        <!-- T=11: Vessel C builds RELAY -->
+        <text x="5" y="352" fill="#8899aa" font-size="9">planned</text>
+        <rect x="360" y="340" width="40" height="18" rx="3" fill="#f7c948" opacity="0.2"/>
+        <text x="380" y="352" fill="#f7c948" font-size="8" text-anchor="middle">builds RELAY</text>
+
+        <!-- T=11.5: RELAY hop 1: C→D -->
+        <text x="5" y="382" fill="#8899aa" font-size="9">planned</text>
+        <line x1="380" y1="376" x2="528" y2="376" stroke="#f7c948" stroke-width="1.5" marker-end="url(#d3)"/>
+        <text x="455" y="370" fill="#f7c948" font-size="8" text-anchor="middle">RELAY hop=1 path=[C]</text>
+
+        <!-- T=12.2: RELAY hop 2: D→CoastGuard -->
+        <text x="5" y="415" fill="#8899aa" font-size="9">planned</text>
+        <line x1="530" y1="409" x2="678" y2="409" stroke="#f7c948" stroke-width="1.5" marker-end="url(#d3)"/>
+        <text x="604" y="403" fill="#f7c948" font-size="8" text-anchor="middle">RELAY hop=2 path=[C,D]</text>
+
+        <!-- T=12.3: Coast guard receives -->
+        <rect x="640" y="418" width="80" height="36" rx="4" fill="#00c8ff" opacity="0.12" stroke="#00c8ff" stroke-width="1"/>
+        <text x="680" y="433" fill="#00c8ff" font-size="9" text-anchor="middle">ALERT</text>
+        <text x="680" y="446" fill="#00c8ff" font-size="9" text-anchor="middle">RECEIVED ✓</text>
+        <text x="5" y="440" fill="#8899aa" font-size="9">planned</text>
+
+        <!-- Divider -->
+        <line x1="20" y1="470" x2="800" y2="470" stroke="#1e2d45" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="410" y="486" fill="#8899aa" font-size="9" text-anchor="middle">Time to coast guard alert is not yet measured: 10 s ACK window + dispatch and relay airtime (relay origination planned)</text>
+
+        <!-- Timeline bar -->
+        <rect x="30" y="495" width="740" height="12" rx="6" fill="#1a2235" stroke="#1e2d45"/>
+        <rect x="30" y="495" width="62" height="12" rx="6" fill="#ff4d6a" opacity="0.6"/>
+        <rect x="92" y="495" width="418" height="12" fill="#f7c948" opacity="0.3"/>
+        <rect x="510" y="495" width="260" height="12" rx="6" fill="#00c8ff" opacity="0.3"/>
+        <text x="61" y="522" fill="#ff4d6a" font-size="8" text-anchor="middle">detect</text>
+        <text x="61" y="533" fill="#8899aa" font-size="8" text-anchor="middle">+ broadcast</text>
+        <text x="301" y="522" fill="#f7c948" font-size="8" text-anchor="middle">10 s</text>
+        <text x="301" y="533" fill="#8899aa" font-size="8" text-anchor="middle">ACK window</text>
+        <text x="640" y="522" fill="#00c8ff" font-size="8" text-anchor="middle">after</text>
+        <text x="640" y="533" fill="#8899aa" font-size="8" text-anchor="middle">Dispatch, relay</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SECTION 10: CACHE -->
+  <section id="cache">
+    <div class="section-label">10</div>
+    <h2>Seen-Message Cache</h2>
+    <p>Every node keeps a small cache of recently seen message IDs to prevent duplicate handling and relay loops.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Field</th><th>Size</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>MSG_ID</td><td>2 bytes</td><td>VESSEL_ID XOR sequence counter. Identifies a message for the cache.</td></tr>
+        <tr><td>seenAt</td><td>4 bytes</td><td><code>millis()</code> when first seen. Used for expiry.</td></tr>
+        <tr><td>used</td><td>1 flag</td><td>Marks the slot as occupied.</td></tr>
+        <tr><td>Capacity</td><td>32 entries</td><td>When full, the oldest entry is overwritten.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Cache Rules</h3>
+    <p>On receiving a DISTRESS, DISPATCH or RELAY packet: if its MSG_ID is in the cache, drop it; otherwise add it and process. A node also marks its own DISTRESS and DISPATCH transmissions as seen. ACK packets are matched against the active distress MSG_ID instead of the cache.</p>
+    <p>Eviction runs on every pass of the main loop: any entry older than 10 minutes is freed.</p>
+
+    <div class="callout warn">
+      <strong>Edge Case</strong>
+      The sequence counter starts at 0 on every boot and the cache is cleared at boot. A rebooted vessel can reuse MSG_IDs that other nodes still hold for up to 10 minutes, so its first distress packets may be silently dropped. Fix: seed the counter from GPS time or persistent storage, and carry VESSEL_ID and SEQ_NUM separately.
+    </div>
+  </section>
+
+  <!-- SECTION 11: SENSING -->
+  <section id="sensing">
+    <div class="section-label">11</div>
+    <h2>Sensing &amp; State Estimation</h2>
+    <p>The vessel state is decided by threshold rules on two independent signals, not a fused estimator. Tilt is the angle between the board z axis and gravity, <code>atan2(sqrt(ax²+ay²), az)</code>, so pitch and roll are both captured. It uses the accelerometer only.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Signal</th><th>Escalate polling</th><th>Distress</th><th>Debounce</th></tr></thead>
+      <tbody>
+        <tr><td>Tilt</td><td>≥ 15°</td><td>≥ 40°</td><td>Must hold ≥ 2 s (filters wave motion)</td></tr>
+        <tr><td>Water level (raw ADC)</td><td>≥ 600</td><td>≥ 2600</td><td>None</td></tr>
+        <tr><td>SOS button</td><td>n/a</td><td>Press</td><td>None (manual override, idle only)</td></tr>
+      </tbody>
+    </table>
+
+    <table class="data-table">
+      <thead><tr><th>Polling tier</th><th>Interval</th><th>Entered when</th></tr></thead>
+      <tbody>
+        <tr><td>Idle</td><td>5 s</td><td>Tilt &lt; 15° and water &lt; 600</td></tr>
+        <tr><td>Escalated</td><td>1.5 s</td><td>Tilt ≥ 15° or water ≥ 600</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Placeholders</strong>
+      Water thresholds are uncalibrated and must be set by dipping the sensor to known depths. <code>TILT_WARNING_DEG</code> (30°) and <code>WATER_WARNING_RAW</code> (1400) are defined but unused. The tilt defaults follow generic heel-angle checkpoints (30° and 40° appear in IMO righting-lever stability criteria for ships); a real vessel's downflooding angle depends on its design. The MPU6050 hardware motion interrupt is configured but not attached to an STM32 interrupt.
+    </div>
+  </section>
+
+  <!-- SECTION 12: STATUS -->
+  <section id="status">
+    <div class="section-label">12</div>
+    <h2>Implementation Status &amp; Known Issues</h2>
+
+    <table class="data-table">
+      <thead><tr><th>Feature</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Tiered sensor polling, tilt hold, water threshold</td><td><span class="tag green">Implemented</span></td><td>Thresholds are placeholders</td></tr>
+        <tr><td>SOS button override</td><td><span class="tag green">Implemented</span></td><td>Idle state only</td></tr>
+        <tr><td>DISTRESS broadcast, 10 s ACK window, retry backoff</td><td><span class="tag green">Implemented</span></td><td>Backoff blocks with <code>delay()</code></td></tr>
+        <tr><td>ACK with distance jitter, role selection, DISPATCH send</td><td><span class="tag green">Implemented</span></td><td>Jitter is a blocking delay</td></tr>
+        <tr><td>Seen-cache, RELAY forwarding with loop check</td><td><span class="tag green">Implemented</span></td><td>Hop offset mismatch (below)</td></tr>
+        <tr><td>DISPATCH reception</td><td><span class="tag yellow">Partial</span></td><td>Length check rejects 21-byte packets</td></tr>
+        <tr><td>Helper and relayer behaviour</td><td><span class="tag yellow">Partial</span></td><td>Buzzer and log only; state has no exit</td></tr>
+        <tr><td>RELAY origination, coast-guard receiver</td><td><span class="tag orange">Planned</span></td><td>Not in this firmware</td></tr>
+        <tr><td>MPU6050 motion interrupt, CHAIN_EXHAUSTED, GPS-valid flag</td><td><span class="tag orange">Planned</span></td><td>Configured or defined only</td></tr>
+        <tr><td>Non-blocking waits</td><td><span class="tag orange">Planned</span></td><td>Needed for SOS and RX during gaps</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Known issues</h3>
+    <p><strong>1. DISPATCH length:</strong> sender transmits 21 bytes, receiver requires 23, so role assignment does not complete over the air. <strong>2. Post-dispatch loop:</strong> the distressed node returns to idle and re-triggers if sensors are still high. <strong>3. RELAY layout:</strong> forwarding reads HOP_COUNT at byte 19; the defined layout puts it at byte 20. <strong>4. MSG_ID:</strong> 16-bit XOR can collide and the counter restarts at 0 on boot. <strong>5. Blocking delays:</strong> retry gaps (up to 170 s) and ACK jitter stop radio and GPS servicing. <strong>6. No GPS fix:</strong> zero coordinates are transmitted with no validity flag. <strong>7. Not field-validated:</strong> range, airtime and end-to-end latency are unmeasured, and TX power of 30 dBm should be checked against current Indian regulations for the 865–867 MHz band.</p>
+  </section>
+
+  <div style="border-top: 1px solid var(--border); padding-top: 24px; margin-top: 40px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; justify-content: space-between;">
+    <span>// VESSEL DISTRESS MONITORING SYSTEM — FIRMWARE v1.0</span>
+    <span>LoRa Mesh | STM32 + E22-900T30D | ~15 km design / 10 hops</span>
+  </div>
+
+</div>
+</body>
+</html>
